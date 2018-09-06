@@ -25,8 +25,8 @@ import (
 type Blockchain []Block
 
 // NewBlockchain returns a blockchain witch records only genesis block.
-func NewBlockchain() Blockchain {
-	return []Block{*GetGenesisBlock()}
+func NewBlockchain(genesis *Block) Blockchain {
+	return []Block{*genesis}
 }
 
 // GetPrevBlock return a previous block based on the index.
@@ -43,6 +43,10 @@ func (bc *Blockchain) Add(b *Block) error {
 	prev, err := bc.GetPrevBlock(b)
 	if err != nil {
 		return err
+	}
+
+	if b.Index == len(*bc)-1 {
+		return errors.New("block with same index has existed")
 	}
 
 	if !b.isValid(prev) {
