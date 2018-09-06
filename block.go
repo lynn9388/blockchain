@@ -63,7 +63,7 @@ func (b *Block) NewBlock(data []byte) *Block {
 // isValid checks if every fields in a block is valid.
 func (b *Block) isValid(prevBlock *Block) bool {
 	if b.Index != prevBlock.Index+1 ||
-		b.Time <= prevBlock.Time ||
+		b.Time < prevBlock.Time ||
 		b.PrevHash != prevBlock.Hash() {
 		return false
 	}
