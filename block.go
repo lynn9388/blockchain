@@ -20,6 +20,7 @@ package blockchain
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"strconv"
 	"time"
 )
@@ -28,7 +29,7 @@ import (
 type Block struct {
 	Index    int    `json:"index"`
 	Time     int64  `json:"time"`
-	PrevHash []byte `json:"prevHash"`
+	PrevHash string `json:"prevHash"`
 	Data     []byte `json:"data"`
 }
 
@@ -37,24 +38,24 @@ func (b *Block) ToByte() []byte {
 	var buff bytes.Buffer
 	buff.WriteString(strconv.Itoa(b.Index))
 	buff.WriteString(strconv.FormatInt(b.Time, 10))
-	buff.Write(b.PrevHash)
+	buff.Write([]byte(b.PrevHash))
 	buff.Write(b.Data)
 	return buff.Bytes()
 }
 
 // Hash returns the SHA256 hash values of the block.
-func (b *Block) Hash() []byte {
+func (b *Block) Hash() string {
 	h := sha256.New()
 	h.Write(b.ToByte())
-	return h.Sum(nil)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
-// NewBlock creates a new block.
-func (b *Block) NewBlock(prevBlock *Block, data []byte) *Block {
+// NewBlock creates a new block next to current block.
+func (b *Block) NewBlock(data []byte) *Block {
 	return &Block{
-		Index:    prevBlock.Index + 1,
+		Index:    b.Index + 1,
 		Time:     time.Now().Unix(),
-		PrevHash: prevBlock.Hash(),
+		PrevHash: b.Hash(),
 		Data:     data,
 	}
 }
@@ -63,7 +64,7 @@ func (b *Block) NewBlock(prevBlock *Block, data []byte) *Block {
 func (b *Block) isValid(prevBlock *Block) bool {
 	if b.Index != prevBlock.Index+1 ||
 		b.Time <= prevBlock.Time ||
-		bytes.Compare(b.PrevHash, prevBlock.Hash()) != 0 {
+		b.PrevHash != prevBlock.Hash() {
 		return false
 	}
 	return true
@@ -75,7 +76,7 @@ func GetGenesisBlock() *Block {
 	return &Block{
 		Index:    0,
 		Time:     t.Unix(),
-		PrevHash: []byte{},
+		PrevHash: "",
 		Data:     []byte{},
 	}
 }
