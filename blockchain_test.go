@@ -19,7 +19,7 @@ package blockchain
 import "testing"
 
 func TestBlockchain_Add(t *testing.T) {
-	genesis := GetGenesisBlock()
+	genesis := GenesisBlock()
 	bc := NewBlockchain(genesis)
 	b := genesis.NewBlock([]byte("lynn9388"))
 	err := bc.Add(b)

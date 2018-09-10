@@ -29,7 +29,7 @@ func NewBlockchain(genesis *Block) Blockchain {
 	return []Block{*genesis}
 }
 
-// GetPrevBlock return a previous block based on the index.
+// GetPrevBlock returns a previous block based on the index.
 func (bc *Blockchain) GetPrevBlock(b *Block) (*Block, error) {
 	index := b.Index - 1
 	if index > len(*bc) {
@@ -38,7 +38,7 @@ func (bc *Blockchain) GetPrevBlock(b *Block) (*Block, error) {
 	return &((*bc)[index]), nil
 }
 
-// Add append a block to the blockchain if the block is valid.
+// Add appends a block to the blockchain if the block is valid.
 func (bc *Blockchain) Add(b *Block) error {
 	prev, err := bc.GetPrevBlock(b)
 	if err != nil {

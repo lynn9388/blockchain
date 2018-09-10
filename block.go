@@ -33,7 +33,7 @@ type Block struct {
 	Data     []byte `json:"data"`
 }
 
-// ToByte convert the block to a slice of byte.
+// ToByte converts the block to a slice of byte.
 func (b *Block) ToByte() []byte {
 	var buff bytes.Buffer
 	buff.WriteString(strconv.Itoa(b.Index))
@@ -70,8 +70,8 @@ func (b *Block) isValid(prevBlock *Block) bool {
 	return true
 }
 
-// GetGenesisBlock returns the genesis block.
-func GetGenesisBlock() *Block {
+// GenesisBlock returns the genesis block.
+func GenesisBlock() *Block {
 	t, _ := time.Parse("2006-1-02", "1993-8-08")
 	return &Block{
 		Index:    0,
