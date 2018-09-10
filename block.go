@@ -25,12 +25,17 @@ import (
 	"time"
 )
 
-// Block holds batches of valid transactions.
-type Block struct {
+// BlockHeader holds the metadata of a block
+type BlockHeader struct {
 	Index    int    `json:"index"`
 	Time     int64  `json:"time"`
 	PrevHash string `json:"prevHash"`
-	Data     []byte `json:"data"`
+}
+
+// Block holds batches of valid transactions.
+type Block struct {
+	BlockHeader
+	Data []byte `json:"data"`
 }
 
 // ToByte converts the block to a slice of byte.
@@ -53,10 +58,12 @@ func (b *Block) Hash() string {
 // NewBlock creates a new block next to current block.
 func (b *Block) NewBlock(data []byte) *Block {
 	return &Block{
-		Index:    b.Index + 1,
-		Time:     time.Now().Unix(),
-		PrevHash: b.Hash(),
-		Data:     data,
+		BlockHeader: BlockHeader{
+			Index:    b.Index + 1,
+			Time:     time.Now().Unix(),
+			PrevHash: b.Hash(),
+		},
+		Data: data,
 	}
 }
 
@@ -74,9 +81,11 @@ func (b *Block) isValid(prevBlock *Block) bool {
 func GenesisBlock() *Block {
 	t, _ := time.Parse("2006-1-02", "1993-8-08")
 	return &Block{
-		Index:    0,
-		Time:     t.Unix(),
-		PrevHash: "",
-		Data:     []byte{},
+		BlockHeader: BlockHeader{
+			Index:    0,
+			Time:     t.Unix(),
+			PrevHash: "",
+		},
+		Data: []byte{},
 	}
 }
