@@ -18,23 +18,28 @@ package blockchain
 
 import "testing"
 
+type testData string
+
+func (td testData) ToByte() []byte {
+	return []byte(td)
+}
+
 func TestBlockchain_Add(t *testing.T) {
 	genesis := GenesisBlock()
 	bc := NewBlockchain(genesis)
-	b := genesis.NewBlock([]byte("lynn9388"))
+	b := genesis.NewBlock(testData("lynn9388"))
 	err := bc.Add(b)
 	if err != nil || len(bc) != 2 {
 		t.Error(err)
 	}
 
-	err = bc.Add(genesis.NewBlock([]byte("lynn9388")))
+	err = bc.Add(genesis.NewBlock(testData("lynn9388")))
 	if err == nil || len(bc) != 2 {
 		t.Fail()
 	}
 
-	err = bc.Add(b.NewBlock([]byte("lynn9388")))
+	err = bc.Add(b.NewBlock(testData("lynn9388")))
 	if err != nil || len(bc) != 3 {
 		t.Error(err)
 	}
-
 }

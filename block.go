@@ -21,21 +21,23 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/lynn9388/merkletree"
 	"strconv"
 	"time"
 )
 
 // BlockHeader holds the metadata of a block
 type BlockHeader struct {
-	Index    int    `json:"index"`
-	Time     int64  `json:"time"`
-	PrevHash string `json:"prevHash"`
+	Index      int    `json:"index"`
+	Time       int64  `json:"time"`
+	PrevHash   string `json:"prevHash"`
+	MerkleRoot string `json:"merkleRoot"`
 }
 
 // Block holds batches of valid transactions.
 type Block struct {
 	BlockHeader
-	Data []byte `json:"data"`
+	Data []merkletree.Data `json:"data"`
 }
 
 // ToByte converts the block to a slice of byte.
@@ -44,24 +46,27 @@ func (b *Block) ToByte() []byte {
 	buff.WriteString(strconv.Itoa(b.Index))
 	buff.WriteString(strconv.FormatInt(b.Time, 10))
 	buff.Write([]byte(b.PrevHash))
-	buff.Write(b.Data)
+	buff.Write([]byte(b.MerkleRoot))
+	for _, datum := range b.Data {
+		buff.Write(datum.ToByte())
+	}
 	return buff.Bytes()
 }
 
-// Hash returns the SHA256 hash values of the block.
+// Hash returns the SHA256 hash values in hexadecimal of the data.
 func (b *Block) Hash() string {
-	h := sha256.New()
-	h.Write(b.ToByte())
-	return hex.EncodeToString(h.Sum(nil))
+	hash := sha256.Sum256(b.ToByte())
+	return hex.EncodeToString(hash[:])
 }
 
 // NewBlock creates a new block next to current block.
-func (b *Block) NewBlock(data []byte) *Block {
+func (b *Block) NewBlock(data ...merkletree.Data) *Block {
 	return &Block{
 		BlockHeader: BlockHeader{
-			Index:    b.Index + 1,
-			Time:     time.Now().Unix(),
-			PrevHash: b.Hash(),
+			Index:      b.Index + 1,
+			Time:       time.Now().Unix(),
+			PrevHash:   b.Hash(),
+			MerkleRoot: merkletree.NewMerkleTree(data...).Root.Hash,
 		},
 		Data: data,
 	}
@@ -71,7 +76,8 @@ func (b *Block) NewBlock(data []byte) *Block {
 func (b *Block) isValid(prevBlock *Block) bool {
 	if b.Index != prevBlock.Index+1 ||
 		b.Time < prevBlock.Time ||
-		b.PrevHash != prevBlock.Hash() {
+		b.PrevHash != prevBlock.Hash() ||
+		b.MerkleRoot != merkletree.NewMerkleTree(b.Data...).Root.Hash {
 		return false
 	}
 	return true
@@ -82,10 +88,11 @@ func GenesisBlock() *Block {
 	t, _ := time.Parse("2006-1-02", "1993-8-08")
 	return &Block{
 		BlockHeader: BlockHeader{
-			Index:    0,
-			Time:     t.Unix(),
-			PrevHash: "",
+			Index:      0,
+			Time:       t.Unix(),
+			PrevHash:   "",
+			MerkleRoot: "",
 		},
-		Data: []byte{},
+		Data: nil,
 	}
 }
