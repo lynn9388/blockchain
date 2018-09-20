@@ -17,26 +17,36 @@
 package blockchain
 
 import (
-	"github.com/lynn9388/merkletree"
 	"testing"
 )
 
-func TestBlockchain_Add(t *testing.T) {
+func TestBlockchain_AddBlock(t *testing.T) {
 	genesis := GenesisBlock()
 	bc := NewBlockchain(genesis)
-	b := genesis.NewBlock(merkletree.StringData("lynn9388"))
-	err := bc.Add(b)
-	if err != nil || len(bc) != 2 {
+
+	err := bc.AddBlock(genesis.Header.NewBlock(StringData("lynn9388")))
+	if err != nil {
 		t.Error(err)
 	}
-
-	err = bc.Add(genesis.NewBlock(merkletree.StringData("lynn9388")))
-	if err == nil || len(bc) != 2 {
-		t.Fail()
+	if bc.Length() != 2 {
+		t.Errorf("failed to add block: %v", bc.Length())
 	}
 
-	err = bc.Add(b.NewBlock(merkletree.StringData("lynn9388")))
-	if err != nil || len(bc) != 3 {
+	err = bc.AddBlock(genesis.Header.NewBlock(StringData("lynn9388")))
+	if err == nil || bc.Length() != 2 {
+		t.Error("failed to add duplicate block")
+	}
+
+	index := bc.Length() - 1
+	b, err := bc.GetBlock(index)
+	if err != nil {
+		t.Errorf("failed to get block: %v", index)
+	}
+	err = bc.AddBlock(b.Header.NewBlock(StringData("lynn9388")))
+	if err != nil {
 		t.Error(err)
+	}
+	if bc.Length() != 3 {
+		t.Errorf("failed to add block: %v", bc.Length())
 	}
 }

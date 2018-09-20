@@ -18,41 +18,46 @@ package blockchain
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 )
 
 // Blockchain records all the blocks.
-type Blockchain []Block
+type Blockchain []*Block
 
-// NewBlockchain returns a blockchain witch records only genesis block.
-func NewBlockchain(genesis *Block) Blockchain {
-	return []Block{*genesis}
+// NewBlockchain returns a blockchain which records only genesis block.
+func NewBlockchain(genesis *Block) *Blockchain {
+	return &Blockchain{genesis}
 }
 
-// GetPrevBlock returns a previous block based on the index.
-func (bc *Blockchain) GetPrevBlock(b *Block) (*Block, error) {
-	index := b.Index - 1
-	if index > len(*bc) {
-		return nil, errors.New("index out or range: " + strconv.Itoa(index))
+// AddBlock appends a block to the blockchain if the block is valid.
+func (bc *Blockchain) AddBlock(b *Block) error {
+	if b.Header.Index != bc.Length() {
+		return errors.New("failed to add block to the end")
 	}
-	return &((*bc)[index]), nil
-}
 
-// Add appends a block to the blockchain if the block is valid.
-func (bc *Blockchain) Add(b *Block) error {
-	prev, err := bc.GetPrevBlock(b)
+	prev, err := bc.GetBlock(b.Header.Index - 1)
 	if err != nil {
 		return err
 	}
 
-	if b.Index == len(*bc)-1 {
-		return errors.New("block with same index has existed")
-	}
-
-	if !b.isValid(prev) {
+	if !b.IsValid(&prev.Header) {
 		return errors.New("block is not valid")
 	}
 
-	*bc = append(*bc, *b)
+	*bc = append(*bc, b)
 	return nil
+}
+
+// GetBlock returns a block based on its index.
+func (bc *Blockchain) GetBlock(i int) (*Block, error) {
+	if i < 0 || i > len(*bc) {
+		return nil, fmt.Errorf("index out of range: %v", strconv.Itoa(i))
+	}
+	return (*bc)[i], nil
+}
+
+// Length returns the length of the blockchain.
+func (bc *Blockchain) Length() int {
+	return len(*bc)
 }

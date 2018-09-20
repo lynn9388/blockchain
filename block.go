@@ -21,9 +21,10 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/lynn9388/merkletree"
 	"strconv"
 	"time"
+
+	"github.com/lynn9388/merkletree"
 )
 
 // BlockHeader holds the metadata of a block
@@ -34,50 +35,57 @@ type BlockHeader struct {
 	MerkleRoot string `json:"merkleRoot"`
 }
 
-// Block holds batches of valid transactions.
+// Block holds batches of valid data/transactions.
 type Block struct {
-	BlockHeader
-	Data []merkletree.Data `json:"data"`
+	Header BlockHeader
+	Data   []Data `json:"data"`
 }
 
-// ToByte converts the block to a slice of byte.
-func (b *Block) ToByte() []byte {
+// ToByte converts the block header to bytes.
+func (bh *BlockHeader) ToByte() []byte {
 	var buff bytes.Buffer
-	buff.WriteString(strconv.Itoa(b.Index))
-	buff.WriteString(strconv.FormatInt(b.Time, 10))
-	buff.Write([]byte(b.PrevHash))
-	buff.Write([]byte(b.MerkleRoot))
-	for _, datum := range b.Data {
-		buff.Write(datum.ToByte())
-	}
+	buff.WriteString(strconv.Itoa(bh.Index))
+	buff.WriteString(strconv.FormatInt(bh.Time, 10))
+	buff.WriteString(bh.PrevHash)
+	buff.WriteString(bh.MerkleRoot)
 	return buff.Bytes()
 }
 
-// Hash returns the SHA256 hash values in hexadecimal of the data.
-func (b *Block) Hash() string {
-	hash := sha256.Sum256(b.ToByte())
+// Hash returns the SHA256 hash values in hexadecimal of the block header.
+func (bh *BlockHeader) Hash() string {
+	hash := sha256.Sum256(bh.ToByte())
 	return hex.EncodeToString(hash[:])
 }
 
-// NewBlock creates a new block next to current block.
-func (b *Block) NewBlock(data ...merkletree.Data) *Block {
+// NewBlock creates a new block next to current block header.
+func (bh *BlockHeader) NewBlock(data ...Data) *Block {
+	var db [][]byte
+	for _, datum := range data {
+		db = append(db, datum.ToByte())
+	}
+
 	return &Block{
-		BlockHeader: BlockHeader{
-			Index:      b.Index + 1,
+		Header: BlockHeader{
+			Index:      bh.Index + 1,
 			Time:       time.Now().Unix(),
-			PrevHash:   b.Hash(),
-			MerkleRoot: merkletree.NewMerkleTree(data...).Root.Hash,
+			PrevHash:   bh.Hash(),
+			MerkleRoot: merkletree.NewMerkleTree(db...).Root.Hash,
 		},
 		Data: data,
 	}
 }
 
-// isValid checks if every fields in a block is valid.
-func (b *Block) isValid(prevBlock *Block) bool {
-	if b.Index != prevBlock.Index+1 ||
-		b.Time < prevBlock.Time ||
-		b.PrevHash != prevBlock.Hash() ||
-		b.MerkleRoot != merkletree.NewMerkleTree(b.Data...).Root.Hash {
+// IsValid checks if every fields in a block is valid.
+func (b *Block) IsValid(prevBlockHeader *BlockHeader) bool {
+	var db [][]byte
+	for _, datum := range b.Data {
+		db = append(db, datum.ToByte())
+	}
+
+	if b.Header.Index != prevBlockHeader.Index+1 ||
+		b.Header.Time < prevBlockHeader.Time ||
+		b.Header.PrevHash != prevBlockHeader.Hash() ||
+		b.Header.MerkleRoot != merkletree.NewMerkleTree(db...).Root.Hash {
 		return false
 	}
 	return true
@@ -87,12 +95,12 @@ func (b *Block) isValid(prevBlock *Block) bool {
 func GenesisBlock() *Block {
 	t, _ := time.Parse("2006-1-02", "1993-8-08")
 	return &Block{
-		BlockHeader: BlockHeader{
+		Header: BlockHeader{
 			Index:      0,
 			Time:       t.Unix(),
 			PrevHash:   "",
 			MerkleRoot: "",
 		},
-		Data: nil,
+		Data: make([]Data, 0),
 	}
 }
