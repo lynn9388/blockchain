@@ -23,11 +23,15 @@ import (
 )
 
 // Blockchain records all the blocks.
-type Blockchain []*Block
+type Blockchain struct {
+	Blocks []*Block
+}
 
 // NewBlockchain returns a blockchain which records only genesis block.
 func NewBlockchain(genesis *Block) *Blockchain {
-	return &Blockchain{genesis}
+	return &Blockchain{
+		Blocks: []*Block{genesis},
+	}
 }
 
 // AddBlock appends a block to the blockchain if the block is valid.
@@ -45,19 +49,19 @@ func (bc *Blockchain) AddBlock(b *Block) error {
 		return errors.New("block is not valid")
 	}
 
-	*bc = append(*bc, b)
+	bc.Blocks = append(bc.Blocks, b)
 	return nil
 }
 
 // GetBlock returns a block based on its index.
 func (bc *Blockchain) GetBlock(i int) (*Block, error) {
-	if i < 0 || i > len(*bc) {
+	if i < 0 || i > bc.Length() {
 		return nil, fmt.Errorf("index out of range: %v", strconv.Itoa(i))
 	}
-	return (*bc)[i], nil
+	return bc.Blocks[i], nil
 }
 
 // Length returns the length of the blockchain.
 func (bc *Blockchain) Length() int {
-	return len(*bc)
+	return len(bc.Blocks)
 }
