@@ -21,7 +21,7 @@ import (
 )
 
 func TestBlockchain_AddBlock(t *testing.T) {
-	genesis := GenesisBlock()
+	genesis := NewGenesisBlock()
 	bc := NewBlockchain(genesis)
 
 	err := bc.AddBlock(genesis.Header.NewBlock(StringData("lynn9388")))

@@ -40,7 +40,7 @@ func init() {
 func NewHost(addr string) *Host {
 	return &Host{
 		Node:       p2p.NewNode(addr),
-		Blockchain: blockchain.NewBlockchain(blockchain.GenesisBlock()),
+		Blockchain: blockchain.NewBlockchain(blockchain.NewGenesisBlock()),
 	}
 }
 

@@ -37,8 +37,8 @@ type BlockHeader struct {
 
 // Block holds batches of valid data/transactions.
 type Block struct {
-	Header BlockHeader
-	Data   []Data `json:"data"`
+	Header BlockHeader `json:"header"`
+	Data   []Data      `json:"data"`
 }
 
 // ToByte converts the block header to bytes.
@@ -91,8 +91,8 @@ func (b *Block) IsValid(prevBlockHeader *BlockHeader) bool {
 	return true
 }
 
-// GenesisBlock returns the genesis block.
-func GenesisBlock() *Block {
+// NewGenesisBlock returns the genesis block.
+func NewGenesisBlock() *Block {
 	t, _ := time.Parse("2006-1-02", "1993-8-08")
 	return &Block{
 		Header: BlockHeader{
