@@ -19,19 +19,68 @@ package blockchain
 import (
 	"bytes"
 	"testing"
+
+	"github.com/boltdb/bolt"
 )
 
+const testID = "9388"
+
 func TestNewBlockchain(t *testing.T) {
-	bc := NewBlockchain("test")
+	bc := NewBlockchain(testID)
 
 	if bc.DB == nil || len(bc.Tips) != 1 || bc.BestTip == nil || bc.Tips[0] != bc.BestTip {
 		t.Errorf("%+v", bc)
 	}
 
 	bc.DB.Close()
-	bc = NewBlockchain("test")
+	bc = NewBlockchain("9388")
+	defer bc.DB.Close()
 	if bc.DB == nil || len(bc.Tips) != 1 || bc.BestTip == nil || bc.Tips[0] != bc.BestTip {
 		t.Errorf("%+v", bc)
+	}
+}
+
+func TestBlockchain_AddBlock(t *testing.T) {
+	bc := NewBlockchain(testID)
+
+	tests := []string{"lynn", "9388"}
+	var hash []byte
+	for _, test := range tests {
+		block := NewBlock(bc.BestTip.Header, nil, [][]byte{[]byte(test)})
+		bc.AddBlock(block, nil)
+
+		isInTips := false
+		for _, tip := range bc.Tips {
+			if tip == block {
+				isInTips = true
+				break
+			}
+		}
+		if !isInTips {
+			t.Error("failed to find block in tips")
+		}
+
+		if bc.BestTip != block {
+			t.Error("failed to check bestTip")
+		}
+
+		hash = block.Header.Hash()
+	}
+
+	bc.DB.Close()
+	bc = NewBlockchain(testID)
+	defer bc.DB.Close()
+	err := bc.DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		var bestTip []byte
+		get(b, []byte(bestTipKey), &bestTip)
+		if hash == nil || !bytes.Equal(hash, bestTip) {
+			t.Error("failed to check bestTip in DB")
+		}
+		return nil
+	})
+	if err != nil {
+		t.FailNow()
 	}
 }
 

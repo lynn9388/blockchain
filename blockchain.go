@@ -80,7 +80,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 			log.Panic(err)
 		}
 
-		err = db.Update(func(tx *bolt.Tx) error {
+		err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(blocksBucket))
 			tips = getTips(b)
 
@@ -100,6 +100,45 @@ func NewBlockchain(nodeID string) *Blockchain {
 	}
 
 	return &Blockchain{DB: db, Tips: tips, BestTip: bestTip}
+}
+
+// AddBlock saves a block into the blockchain if it is valid. isExtraValid
+// can be nil if check extra info is unnecessary.
+func (bc *Blockchain) AddBlock(b *Block, isExtraValid func([]byte) bool) {
+	tipNum := -1
+	for i, tip := range bc.Tips {
+		if bytes.Equal(tip.Header.Hash(), b.Header.PrevHash) {
+			tipNum = i
+			break
+		}
+	}
+
+	if tipNum < 0 {
+		log.Panic("failed to find previous block")
+	}
+
+	if !b.IsValid(bc.Tips[tipNum].Header, isExtraValid) {
+		log.Panic("block is not valid")
+	}
+
+	err := bc.DB.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blocksBucket))
+
+		put(bucket, b.Header.Hash(), *b)
+
+		bc.Tips[tipNum] = b
+		putTips(bucket, bc.Tips)
+
+		if b.Header.Index > bc.BestTip.Header.Index {
+			bc.BestTip = b
+			put(bucket, []byte(bestTipKey), b.Header.Hash())
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
 }
 
 // dbExists checks if DB file exists.
