@@ -98,8 +98,14 @@ func NewGenesisBlock() *Block {
 	}
 }
 
-// NewBlock creates a new block.
+// NewBlock creates a new block. If there is no extra info then extra can
+// be nil (will be converted to empty) or empty. The data can not be nil or
+// empty, because a block without data is invalid.
 func NewBlock(prevBlockHeader *BlockHeader, extra []byte, data [][]byte) *Block {
+	if extra == nil || len(extra) == 0 {
+		extra = []byte("")
+	}
+
 	return &Block{
 		Header: &BlockHeader{
 			Index:      prevBlockHeader.Index + 1,
