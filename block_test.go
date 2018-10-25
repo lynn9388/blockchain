@@ -17,6 +17,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"encoding/hex"
 	"testing"
 )
@@ -39,6 +40,18 @@ func TestBlock_IsValid(t *testing.T) {
 	genesis := NewGenesisBlock()
 	block := NewBlock(genesis.Header, []byte(""), [][]byte{[]byte("lynn9388")})
 	if block.IsValid(genesis.Header, nil) == false {
+		t.FailNow()
+	}
+
+	if block.IsValid(genesis.Header, func(b []byte) bool {
+		return bytes.Equal(b, genesis.Header.Extra)
+	}) == false {
+		t.FailNow()
+	}
+
+	if block.IsValid(genesis.Header, func(b []byte) bool {
+		return !bytes.Equal(b, genesis.Header.Extra)
+	}) == true {
 		t.FailNow()
 	}
 
