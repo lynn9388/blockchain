@@ -17,36 +17,48 @@
 package blockchain
 
 import (
+	"bytes"
 	"testing"
 )
 
-func TestBlockchain_AddBlock(t *testing.T) {
-	genesis := NewGenesisBlock()
-	bc := NewBlockchain(genesis)
+func TestNewBlockchain(t *testing.T) {
+	bc := NewBlockchain("test")
 
-	err := bc.AddBlock(genesis.Header.NewBlock(StringData("lynn9388")))
-	if err != nil {
-		t.Error(err)
-	}
-	if bc.Length() != 2 {
-		t.Errorf("failed to add block: %v", bc.Length())
+	if bc.DB == nil || len(bc.Tips) != 1 || bc.BestTip == nil || bc.Tips[0] != bc.BestTip {
+		t.Errorf("%+v", bc)
 	}
 
-	err = bc.AddBlock(genesis.Header.NewBlock(StringData("lynn9388")))
-	if err == nil || bc.Length() != 2 {
-		t.Error("failed to add duplicate block")
+	bc.DB.Close()
+	bc = NewBlockchain("test")
+	if bc.DB == nil || len(bc.Tips) != 1 || bc.BestTip == nil || bc.Tips[0] != bc.BestTip {
+		t.Errorf("%+v", bc)
+	}
+}
+
+func TestSerialize(t *testing.T) {
+	tests := []interface{}{"lynn9388", NewGenesisBlock()}
+	for test := range tests {
+		b := serialize(test)
+		if b == nil || len(b) == 0 {
+			t.Fail()
+		}
+	}
+}
+
+func TestDeserialize(t *testing.T) {
+	testStr := "lynn9388"
+	b := serialize(testStr)
+	var str string
+	deserialize(b, &str)
+	if str != testStr {
+		t.Error("failed to deserialize string")
 	}
 
-	index := bc.Length() - 1
-	b, err := bc.GetBlock(index)
-	if err != nil {
-		t.Errorf("failed to get block: %v", index)
-	}
-	err = bc.AddBlock(b.Header.NewBlock(StringData("lynn9388")))
-	if err != nil {
-		t.Error(err)
-	}
-	if bc.Length() != 3 {
-		t.Errorf("failed to add block: %v", bc.Length())
+	testBlock := NewGenesisBlock()
+	b = serialize(testBlock)
+	var block Block
+	deserialize(b, &block)
+	if !bytes.Equal(block.Header.Hash(), testBlock.Header.Hash()) {
+		t.Error("failed to deserialize block")
 	}
 }

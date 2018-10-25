@@ -17,51 +17,158 @@
 package blockchain
 
 import (
-	"errors"
+	"bytes"
+	"encoding/gob"
 	"fmt"
-	"strconv"
+	"os"
+
+	"github.com/boltdb/bolt"
 )
 
-// Blockchain records all the blocks.
+const (
+	dbFile       = "blockchain_%s.db" // name of DB file
+	blocksBucket = "blocks"           // name of bucket storing blockchain
+	tipsKey      = "tips"             // key for last block's hash of all branches
+	bestTipKey   = "bestTip"          // key for last block's hash of longest branch
+)
+
+// Blockchain implements interactions with a DB.
 type Blockchain struct {
-	Blocks []*Block
+	DB      *bolt.DB // DB stored the blockchain
+	Tips    []*Block // last block of all branches
+	BestTip *Block   // last block of longest branch
 }
 
-// NewBlockchain returns a blockchain which records only genesis block.
-func NewBlockchain(genesis *Block) *Blockchain {
-	return &Blockchain{
-		Blocks: []*Block{genesis},
+// NewBlockchain creates a blockchain from DB file. If the file does not
+// exist then it will be created and initialize a new blockchain with
+// genesis block.
+func NewBlockchain(nodeID string) *Blockchain {
+	var db *bolt.DB
+	var tips []*Block
+	var bestTip *Block
+
+	dbFile := fmt.Sprintf(dbFile, nodeID)
+	var err error
+	if !dbExists(dbFile) {
+		db, err = bolt.Open(dbFile, 0600, nil)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		err = db.Update(func(tx *bolt.Tx) error {
+			b, err := tx.CreateBucket([]byte(blocksBucket))
+			if err != nil {
+				log.Panic(err)
+			}
+
+			genesis := NewGenesisBlock()
+			tips = append(tips, genesis)
+			bestTip = tips[0]
+
+			put(b, genesis.Header.Hash(), genesis)
+			putTips(b, tips)
+			put(b, []byte(bestTipKey), bestTip.Header.Hash())
+
+			return nil
+		})
+		if err != nil {
+			log.Panic()
+		}
+	} else {
+		db, err = bolt.Open(dbFile, 0600, nil)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		err = db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(blocksBucket))
+			tips = getTips(b)
+
+			var hash []byte
+			get(b, []byte(bestTipKey), &hash)
+			for _, tip := range tips {
+				if bytes.Equal(tip.Header.Hash(), hash) {
+					bestTip = tip
+				}
+			}
+
+			return nil
+		})
+		if err != nil {
+			log.Panic(err)
+		}
 	}
+
+	return &Blockchain{DB: db, Tips: tips, BestTip: bestTip}
 }
 
-// AddBlock appends a block to the blockchain if the block is valid.
-func (bc *Blockchain) AddBlock(b *Block) error {
-	if b.Header.Index != bc.Length() {
-		return errors.New("failed to add block to the end")
+// dbExists checks if DB file exists.
+func dbExists(dbFile string) bool {
+	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+		return false
 	}
+	return true
+}
 
-	prev, err := bc.GetBlock(b.Header.Index - 1)
+// serialize serializes data to byte slice.
+func serialize(data interface{}) []byte {
+	var buff bytes.Buffer
+	encoder := gob.NewEncoder(&buff)
+	err := encoder.Encode(data)
 	if err != nil {
-		return err
+		log.Panic(err)
 	}
-
-	if !b.IsValid(&prev.Header) {
-		return errors.New("block is not valid")
-	}
-
-	bc.Blocks = append(bc.Blocks, b)
-	return nil
+	return buff.Bytes()
 }
 
-// GetBlock returns a block based on its index.
-func (bc *Blockchain) GetBlock(i int) (*Block, error) {
-	if i < 0 || i > bc.Length() {
-		return nil, fmt.Errorf("index out of range: %v", strconv.Itoa(i))
+// deserialize deserializes serialized byte slice back to data.
+func deserialize(b []byte, dataPtr interface{}) {
+	decoder := gob.NewDecoder(bytes.NewReader(b))
+	err := decoder.Decode(dataPtr)
+	if err != nil {
+		log.Panic(err)
 	}
-	return bc.Blocks[i], nil
 }
 
-// Length returns the length of the blockchain.
-func (bc *Blockchain) Length() int {
-	return len(bc.Blocks)
+// put sets the value for a key in the bucket. The value will be serialized
+// automatically.
+func put(b *bolt.Bucket, key []byte, value interface{}) {
+	err := b.Put(key, serialize(value))
+	if err != nil {
+		log.Panic(fmt.Sprintf("failed to put %v", key), err)
+	}
+}
+
+// get retrieves the value for a key in the bucket, and deserializes the
+// value to dataPtr.
+func get(b *bolt.Bucket, key []byte, dataPtr interface{}) {
+	data := b.Get(key)
+	if data == nil {
+		log.Panic(fmt.Sprintf("failed to get %v", key))
+	}
+	deserialize(data, dataPtr)
+}
+
+// putTips puts the hashes of tip blocks in the bucket.
+func putTips(b *bolt.Bucket, tips []*Block) {
+	var hashes [][]byte
+	for _, tip := range tips {
+		hashes = append(hashes, tip.Header.Hash())
+	}
+	put(b, []byte(tipsKey), hashes)
+}
+
+// getTips retrieves the tip blocks from the bucket.
+func getTips(b *bolt.Bucket) []*Block {
+	var hashes [][]byte
+	var tips []*Block
+
+	get(b, []byte(tipsKey), &hashes)
+	for _, hash := range hashes {
+		var tip Block
+		get(b, hash, &tip)
+		tips = append(tips, &tip)
+	}
+
+	return tips
 }
