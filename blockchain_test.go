@@ -18,22 +18,22 @@ package blockchain
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/boltdb/bolt"
 )
 
-const testID = "9388"
-
 func TestNewBlockchain(t *testing.T) {
-	bc := NewBlockchain(testID)
+	bc := NewBlockchain("test.db")
 
 	if bc.DB == nil || len(bc.Tips) != 1 || bc.BestTip == nil || bc.Tips[0] != bc.BestTip {
 		t.Errorf("%+v", bc)
 	}
 
 	bc.DB.Close()
-	bc = NewBlockchain("9388")
+	bc = NewBlockchain("test.db")
+	defer os.Remove("test.db")
 	defer bc.DB.Close()
 	if bc.DB == nil || len(bc.Tips) != 1 || bc.BestTip == nil || bc.Tips[0] != bc.BestTip {
 		t.Errorf("%+v", bc)
@@ -41,7 +41,7 @@ func TestNewBlockchain(t *testing.T) {
 }
 
 func TestBlockchain_AddBlock(t *testing.T) {
-	bc := NewBlockchain(testID)
+	bc := NewBlockchain("test.db")
 
 	tests := []string{"lynn", "9388"}
 	var hash []byte
@@ -68,7 +68,8 @@ func TestBlockchain_AddBlock(t *testing.T) {
 	}
 
 	bc.DB.Close()
-	bc = NewBlockchain(testID)
+	bc = NewBlockchain("test.db")
+	defer os.Remove("test.db")
 	defer bc.DB.Close()
 	err := bc.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))

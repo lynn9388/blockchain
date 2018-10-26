@@ -26,10 +26,9 @@ import (
 )
 
 const (
-	dbFile       = "blockchain_%s.db" // name of DB file
-	blocksBucket = "blocks"           // name of bucket storing blockchain
-	tipsKey      = "tips"             // key for last block's hash of all branches
-	bestTipKey   = "bestTip"          // key for last block's hash of longest branch
+	blocksBucket = "blocks"  // name of bucket storing blockchain
+	tipsKey      = "tips"    // key for last block's hash of all branches
+	bestTipKey   = "bestTip" // key for last block's hash of longest branch
 )
 
 // Blockchain implements interactions with a DB.
@@ -42,12 +41,11 @@ type Blockchain struct {
 // NewBlockchain creates a blockchain from DB file. If the file does not
 // exist then it will be created and initialize a new blockchain with
 // genesis block.
-func NewBlockchain(nodeID string) *Blockchain {
+func NewBlockchain(dbFile string) *Blockchain {
 	var db *bolt.DB
 	var tips []*Block
 	var bestTip *Block
 
-	dbFile := fmt.Sprintf(dbFile, nodeID)
 	var err error
 	if !dbExists(dbFile) {
 		db, err = bolt.Open(dbFile, 0600, nil)
