@@ -41,7 +41,7 @@ type Blockchain struct {
 // NewBlockchain creates a blockchain from DB file. If the file does not
 // exist then it will be created and initialize a new blockchain with
 // genesis block.
-func NewBlockchain(dbFile string) *Blockchain {
+func NewBlockchain(dbFile string, genesis *Block) *Blockchain {
 	var db *bolt.DB
 	var tips []*Block
 	var bestTip *Block
@@ -59,7 +59,6 @@ func NewBlockchain(dbFile string) *Blockchain {
 				log.Panic(err)
 			}
 
-			genesis := NewGenesisBlock()
 			tips = append(tips, genesis)
 			bestTip = tips[0]
 

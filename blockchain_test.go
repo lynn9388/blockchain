@@ -25,14 +25,14 @@ import (
 )
 
 func TestNewBlockchain(t *testing.T) {
-	bc := NewBlockchain("test.db")
+	bc := NewBlockchain("test.db", NewGenesisBlock())
 
 	if bc.DB == nil || len(bc.Tips) != 1 || bc.BestTip == nil || bc.Tips[0] != bc.BestTip {
 		t.Errorf("%+v", bc)
 	}
 
 	bc.DB.Close()
-	bc = NewBlockchain("test.db")
+	bc = NewBlockchain("test.db", nil)
 	defer os.Remove("test.db")
 	defer bc.DB.Close()
 	if bc.DB == nil || len(bc.Tips) != 1 || bc.BestTip == nil || bc.Tips[0] != bc.BestTip {
@@ -41,7 +41,7 @@ func TestNewBlockchain(t *testing.T) {
 }
 
 func TestBlockchain_AddBlock(t *testing.T) {
-	bc := NewBlockchain("test.db")
+	bc := NewBlockchain("test.db", NewGenesisBlock())
 
 	tests := []string{"lynn", "9388"}
 	var hash []byte
@@ -68,7 +68,7 @@ func TestBlockchain_AddBlock(t *testing.T) {
 	}
 
 	bc.DB.Close()
-	bc = NewBlockchain("test.db")
+	bc = NewBlockchain("test.db", nil)
 	defer os.Remove("test.db")
 	defer bc.DB.Close()
 	err := bc.DB.View(func(tx *bolt.Tx) error {

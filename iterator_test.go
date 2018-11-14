@@ -22,7 +22,7 @@ import (
 )
 
 func TestIterator_Prev(t *testing.T) {
-	bc := NewBlockchain("test.db")
+	bc := NewBlockchain("test.db", NewGenesisBlock())
 	defer os.Remove("test.db")
 	defer bc.DB.Close()
 
